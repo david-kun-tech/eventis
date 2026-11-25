@@ -1,56 +1,78 @@
-# Welcome to your Expo app 👋
+# Eventis
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An event marketplace for Nigeria, built with Expo (React Native) and TypeScript. Book event centres, rent chairs, tents and generators, and hire decorators and planners, with prices, terms and track records visible **before** you pay.
 
-## Get started
+Runs on Android and the web from one codebase. A static web demo deploys free to GitHub Pages.
 
-1. Install dependencies
+> **Demo status.** Vendors, prices, reviews and "other customers' bookings" are fictional sample data. Payments, vendor replies and refunds are simulated, and no money moves. The cancellation tiers and the damage-deduction rule are an illustrative proposal, not legal terms.
 
-   ```bash
-   npm install
-   ```
+## The problem it tackles
 
-2. Start the app
+Event booking in Nigeria often runs on WhatsApp and phone calls. Common failure points include vendors who do not show up, double-booked stock, hidden extras such as generator fuel, disputes over damaged or missing rentals, and reviews that cannot be trusted. Eventis turns each into a product feature.
 
-   ```bash
-   npx expo start
-   ```
+| Gap in the market | What Eventis does | Where in the code |
+| --- | --- | --- |
+| Double-booking; "available" means nothing for stock items | Vendors list units owned. Availability is computed per item, per date; held stock drops when you book | `src/lib/availability.ts` |
+| Surprise charges (fuel, delivery, "caution") | One all-in breakdown: items, delivery, fuel, refundable caution deposit, deposit and balance | `src/lib/pricing.ts` |
+| Unclear refunds and vendor no-shows | Three cancellation policies with published refund tiers. A vendor no-show refunds everything paid | `src/lib/policies.ts`, `src/lib/store.tsx` |
+| Damage and missing-item disputes on rentals | Count at delivery, check at return. Missing items are charged at replacement value, damaged at 50%, capped at the caution deposit | `settleReturn` in `src/lib/pricing.ts` |
+| Power failures at venues | Generator size, auto-changeover and fuel terms on every venue page, with warnings at booking | `src/app/vendor/[id].tsx`, `src/app/book/[id].tsx` |
+| Outdoor events and rain | Outdoor toggle that prompts for a rain-cover plan | `src/app/book/[id].tsx` |
+| Hard to know what to hire | Guest-count planner (chairs, tables, toilets, generator size, canopies) | `src/app/(tabs)/plan.tsx` |
+| Fake or unhelpful reviews | Reviews only after a completed booking, with punctuality scored separately, plus a reliability record (on-time %, vendor cancellations, response time) | `src/app/vendor/[id].tsx` |
+| Price comparison is guesswork | "Above / below average" tag on comparable items | `MARKET_AVG` in `src/data/vendors.ts` |
 
-In the output, you'll find options to open the app in a
+## Booking flow
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+`requested → accepted → deposit paid → balance paid → delivered (count) → completed (return check) → review`
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+At any point before delivery you can cancel; the refund is computed from the vendor's policy and the days remaining. On the day, you can report a vendor no-show.
 
-## Get a fresh project
-
-When you're ready, run:
+## Run it
 
 ```bash
-npm run reset-project
+npm install
+npm start          # then press w for web, or scan the QR code with Expo Go on Android
+npm test           # vitest: pricing, policies, settlement, availability
+npm run typecheck
+npm run build:web  # static export to dist/
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+State is saved on-device with AsyncStorage. "Clear demo data" on the Bookings tab resets it.
 
-### Other setup steps
+## Deploy the web demo (free)
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+1. Create a GitHub repo named `eventis` and push this project to `main`.
+2. In **Settings → Pages**, set the source to **GitHub Actions**.
+3. The workflow in `.github/workflows/deploy.yml` runs typecheck and tests, builds, and publishes.
 
-## Learn more
+The site is served from `/eventis`, set by `experiments.baseUrl` in `app.json`. If you name the repo differently, change it there.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Android build
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx eas-cli@latest build --platform android --profile preview   # installable APK
+```
 
-## Join the community
+iOS needs an Apple Developer account and a real iPhone or TestFlight, because the iOS simulator only runs on macOS. EAS can build in the cloud without a Mac.
 
-Join our community of developers creating universal apps.
+## Structure
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```
+src/app/            Expo Router screens: (tabs) home/explore/plan/bookings, vendor, book, booking
+src/components/     UI kit, vendor card, date picker
+src/data/vendors.ts Sample vendors, market averages, planner ratios
+src/lib/            pricing, policies, availability, store (context + AsyncStorage), types
+tests/              vitest suite
+```
+
+## Known limits and next steps
+
+- No backend: a real version needs auth, vendor accounts, real payments held in escrow, and vendor-side calendars. Supabase would fit.
+- Planner ratios are rules of thumb. Vendors and venues should confirm quantities.
+- Photos are not included yet; vendor profiles are text only.
+- iOS is untested.
+
+## License
+
+MIT
