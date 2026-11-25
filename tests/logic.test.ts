@@ -248,3 +248,53 @@ describe('venue calendar', () => {
     expect(dec.filter(Boolean)).toHaveLength(31);
   });
 });
+
+describe('accounts', () => {
+  const nodeSha: import('@/lib/auth').Hasher = async (d) => (await import('node:crypto')).createHash('sha256').update(d).digest('hex');
+  const ids = { id: 'u1', salt: 'abc123', now: '2026-11-25T10:00:00.000Z' };
+  const input = { name: '  Amaka   Obi ', email: ' Amaka@Example.com ', phone: '', password: 'party2026' };
+
+  it('validates sign-up fields and blocks duplicate emails', async () => {
+    const { signUpProblems, createAccount } = await import('@/lib/auth');
+    expect(signUpProblems({ name: 'Amaka', email: 'nope', phone: '0603', password: 'short' }, [])).toEqual({
+      name: expect.any(String),
+      email: expect.any(String),
+      phone: expect.any(String),
+      password: expect.any(String),
+    });
+    expect(signUpProblems(input, [])).toEqual({});
+    const existing = await createAccount(input, ids, nodeSha);
+    expect(signUpProblems({ ...input, email: 'AMAKA@example.com' }, [existing]).email).toMatch(/already exists/);
+  });
+
+  it('never stores the password, and normalises name and email', async () => {
+    const { createAccount } = await import('@/lib/auth');
+    const a = await createAccount(input, ids, nodeSha);
+    expect(a.name).toBe('Amaka Obi');
+    expect(a.email).toBe('amaka@example.com');
+    expect(JSON.stringify(a)).not.toContain('party2026');
+    expect(a.hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('logs in with the right password only, case-insensitive on email', async () => {
+    const { createAccount, verifyLogin } = await import('@/lib/auth');
+    const a = await createAccount(input, ids, nodeSha);
+    expect((await verifyLogin('AMAKA@EXAMPLE.COM', 'party2026', [a], nodeSha))?.id).toBe('u1');
+    expect(await verifyLogin('amaka@example.com', 'party2027', [a], nodeSha)).toBeNull();
+    expect(await verifyLogin('someone@example.com', 'party2026', [a], nodeSha)).toBeNull();
+  });
+
+  it('salts hashes, so the same password differs between accounts', async () => {
+    const { createAccount } = await import('@/lib/auth');
+    const a = await createAccount(input, ids, nodeSha);
+    const b = await createAccount({ ...input, email: 'b@example.com' }, { ...ids, salt: 'zzz999' }, nodeSha);
+    expect(a.hash).not.toBe(b.hash);
+  });
+
+  it('derives initials and first names', async () => {
+    const { initials, firstName } = await import('@/lib/auth');
+    expect(initials('amaka chidinma obi')).toBe('AO');
+    expect(initials('Tolu')).toBe('T');
+    expect(firstName(' Amaka Obi')).toBe('Amaka');
+  });
+});

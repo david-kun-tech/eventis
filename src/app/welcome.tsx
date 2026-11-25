@@ -179,7 +179,7 @@ export default function Welcome() {
     router.replace('/');
   };
   const next = () => {
-    if (last) return done();
+    if (last) return router.push('/auth/sign-up');
     scroller.current?.scrollTo({ x: (i + 1) * w, animated: true });
     setI(i + 1);
   };
@@ -197,13 +197,11 @@ export default function Welcome() {
               Eventis
             </T>
           </View>
-          {!last && (
-            <Pressable onPress={done} hitSlop={10} accessibilityRole="button" accessibilityLabel="Skip introduction">
-              <T size={14} semi color={C.brand}>
-                Skip
-              </T>
-            </Pressable>
-          )}
+          <Pressable onPress={done} hitSlop={10} accessibilityRole="button">
+            <T size={14} semi color={C.goldDark}>
+              Continue as guest
+            </T>
+          </Pressable>
         </View>
 
         <View style={{ flex: 1 }} onLayout={(e) => setSize({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
@@ -231,10 +229,23 @@ export default function Welcome() {
         <View style={{ paddingHorizontal: S.xl }}>
           <Dots count={SLIDES.length} active={i} />
           <View style={{ height: S.xl }} />
-          <Button label={last ? 'Get started' : 'Next'} icon={last ? 'sparkles' : undefined} onPress={next} />
-          <T size={12} color={C.faint} center style={{ marginTop: S.md }}>
-            Demo app · sample vendors, no real payments
-          </T>
+          <Button label={last ? 'Create account' : 'Next'} icon={last ? 'sparkles' : undefined} onPress={next} />
+          {last ? (
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: S.md }}>
+              <T size={14} color={C.sub}>
+                Already have an account?{' '}
+              </T>
+              <Pressable accessibilityRole="link" onPress={() => router.push('/auth/log-in')} hitSlop={8}>
+                <T size={14} semi color={C.brand} style={{ textDecorationLine: 'underline' }}>
+                  Log in
+                </T>
+              </Pressable>
+            </View>
+          ) : (
+            <T size={12} color={C.faint} center style={{ marginTop: S.md }}>
+              Demo app · sample vendors, no real payments
+            </T>
+          )}
         </View>
       </View>
     </View>

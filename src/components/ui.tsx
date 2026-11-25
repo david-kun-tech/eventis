@@ -709,10 +709,20 @@ export function Field({
   multiline,
   autoCapitalize,
   optional,
+  secure,
+  autoComplete,
+  returnKeyType,
+  onSubmitEditing,
 }: {
   label: string;
   value: string;
   onChangeText: (s: string) => void;
+  /** Password field with a show/hide toggle. */
+  secure?: boolean;
+  /** Lets browsers and password managers fill the field. */
+  autoComplete?: 'name' | 'email' | 'tel' | 'password' | 'new-password' | 'off';
+  returnKeyType?: 'next' | 'done' | 'go';
+  onSubmitEditing?: () => void;
   placeholder?: string;
   hint?: string;
   /** Shown in red instead of the hint. */
@@ -723,6 +733,7 @@ export function Field({
   autoCapitalize?: 'none' | 'words' | 'sentences' | 'characters';
   optional?: boolean;
 }) {
+  const [shown, setShown] = useState(false);
   return (
     <View style={{ marginBottom: S.lg }}>
       <T size={13} semi style={{ marginBottom: 6 }}>
@@ -741,15 +752,31 @@ export function Field({
         keyboardType={keyboardType}
         maxLength={maxLength}
         multiline={multiline}
-        autoCapitalize={autoCapitalize}
+        autoCapitalize={secure || autoComplete === 'email' ? 'none' : autoCapitalize}
+        autoCorrect={secure || autoComplete === 'email' ? false : undefined}
+        secureTextEntry={secure && !shown}
+        autoComplete={autoComplete}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
         accessibilityLabel={label}
         style={[
           styles.field,
+          secure && { paddingRight: 48 },
           multiline && { height: 96, paddingTop: 12, textAlignVertical: 'top' },
           !!error && { borderColor: C.red },
           Platform.OS === 'web' && ({ outlineStyle: 'none' } as unknown as TextStyle),
         ]}
       />
+      {secure ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={shown ? 'Hide password' : 'Show password'}
+          onPress={() => setShown(!shown)}
+          hitSlop={8}
+          style={styles.eye}>
+          <Ionicons name={shown ? 'eye-off-outline' : 'eye-outline'} size={20} color={C.sub} />
+        </Pressable>
+      ) : null}
       {error ? (
         <T size={12} color={C.red} style={{ marginTop: 4 }}>
           {error}
@@ -860,6 +887,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: C.ink,
   },
+  eye: { position: 'absolute', right: 14, top: 24, height: 48, justifyContent: 'center' },
   checkbox: {
     width: 22,
     height: 22,

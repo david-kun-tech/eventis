@@ -46,6 +46,9 @@ export default function RootLayout() {
           <Stack.Screen name="booking/[id]" options={{ title: 'Booking details' }} />
           <Stack.Screen name="partner" options={{ title: 'Become a vendor' }} />
           <Stack.Screen name="partner/apply" options={{ title: 'Vendor application' }} />
+          <Stack.Screen name="auth/sign-up" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/log-in" options={{ headerShown: false }} />
+          <Stack.Screen name="account" options={{ title: 'Your account' }} />
         </Stack>
       </StoreProvider>
     </SafeAreaProvider>

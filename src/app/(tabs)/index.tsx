@@ -20,6 +20,7 @@ import {
   T,
 } from '@/components/ui';
 import { VENDORS } from '@/data/vendors';
+import { firstName, initials } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { useStore } from '@/lib/store';
 import { C, CAT, R, S, shadow } from '@/lib/theme';
@@ -129,7 +130,7 @@ function Banners() {
 }
 
 export default function Home() {
-  const { eventDate, setEventDate, guests, setGuests, saved, bookings, vendorApp } = useStore();
+  const { eventDate, setEventDate, guests, setGuests, saved, vendorApp, user } = useStore();
   const top = [...VENDORS].sort((a, b) => b.rating - a.rating).slice(0, 6);
 
   return (
@@ -145,7 +146,7 @@ export default function Home() {
               accessibilityLabel="Eventis logo"
             />
             <T size={13} color={C.sub}>
-              Welcome to Eventis
+              {user ? `Hi, ${firstName(user.name)}` : 'Welcome to Eventis'}
             </T>
           </View>
           <T size={26} bold>
@@ -159,7 +160,19 @@ export default function Home() {
             badge={saved.length}
             onPress={() => router.push({ pathname: '/explore', params: { saved: '1' } })}
           />
-          <IconButton icon="calendar-outline" label="My bookings" badge={bookings.length} onPress={() => router.push('/bookings')} />
+          {user ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Your account, ${user.name}`}
+              onPress={() => router.push('/account')}
+              style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.85 }]}>
+              <T size={14} bold color={C.gold}>
+                {initials(user.name)}
+              </T>
+            </Pressable>
+          ) : (
+            <IconButton icon="person-outline" label="Log in or create an account" onPress={() => router.push('/account')} />
+          )}
         </View>
       </View>
 
@@ -310,6 +323,14 @@ const styles = StyleSheet.create({
     borderTopColor: C.line,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginBottom: S.lg },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: C.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   vendorCta: {
     flexDirection: 'row',
     alignItems: 'center',

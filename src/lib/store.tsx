@@ -5,6 +5,8 @@ import { getVendor } from '@/data/vendors';
 import { buildBreakdown, previewCancellation, settleReturn } from './pricing';
 import type { Booking, BookingLine, BookingStatus } from './types';
 import type { ApplicationDraft, VendorApplication } from './verification';
+import { createAccount, signUpProblems, verifyLogin, type Account, type SignUpInput, type SignUpProblems } from './auth';
+import { newId, randomHex, sha256 } from './crypto';
 
 const KEY = 'eventis:v1';
 
@@ -18,6 +20,9 @@ interface Persisted {
   /** "Become a vendor": an unfinished form, and the submitted application under review. */
   vendorDraft: ApplicationDraft | null;
   vendorApp: VendorApplication | null;
+  /** Demo accounts on this device, and who is logged in. */
+  accounts: Account[];
+  sessionId: string | null;
 }
 
 interface Store extends Persisted {
@@ -27,6 +32,12 @@ interface Store extends Persisted {
   toggleSaved: (id: string) => void;
   finishOnboarding: () => void;
   saveVendorDraft: (d: ApplicationDraft | null) => void;
+  /** The logged-in account, if any. */
+  user: Account | null;
+  signUp: (input: SignUpInput) => Promise<SignUpProblems>;
+  logIn: (email: string, password: string) => Promise<boolean>;
+  logOut: () => void;
+  deleteAccount: () => void;
   saveVendorApp: (a: VendorApplication | null) => void;
   createBooking: (input: {
     vendorId: string;
@@ -52,6 +63,8 @@ const initial: Persisted = {
   onboarded: false,
   vendorDraft: null,
   vendorApp: null,
+  accounts: [],
+  sessionId: null,
 };
 const Ctx = createContext<Store | null>(null);
 
@@ -95,6 +108,22 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         })),
       finishOnboarding: () => setState((s) => ({ ...s, onboarded: true })),
       saveVendorDraft: (d) => setState((s) => ({ ...s, vendorDraft: d })),
+      user: state.accounts.find((a) => a.id === state.sessionId) ?? null,
+      signUp: async (input) => {
+        const problems = signUpProblems(input, state.accounts);
+        if (Object.keys(problems).length) return problems;
+        const acct = await createAccount(input, { id: newId(), salt: randomHex(), now: stamp() }, sha256);
+        setState((s) => ({ ...s, accounts: [...s.accounts, acct], sessionId: acct.id, onboarded: true }));
+        return {};
+      },
+      logIn: async (email, password) => {
+        const acct = await verifyLogin(email, password, state.accounts, sha256);
+        if (acct) setState((s) => ({ ...s, sessionId: acct.id, onboarded: true }));
+        return !!acct;
+      },
+      logOut: () => setState((s) => ({ ...s, sessionId: null })),
+      deleteAccount: () =>
+        setState((s) => ({ ...s, accounts: s.accounts.filter((a) => a.id !== s.sessionId), sessionId: null })),
       saveVendorApp: (a) => setState((s) => ({ ...s, vendorApp: a })),
       createBooking: ({ vendorId, dateISO, lines, outdoor, notes }) => {
         const vendor = getVendor(vendorId)!;
@@ -181,8 +210,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           review: r,
           events: [...b.events, { at: stamp(), text: 'Verified review posted.' }],
         })),
-      // Clearing demo data keeps the welcome slides dismissed.
-      reset: () => setState({ ...initial, onboarded: true }),
+      // Clearing demo data keeps accounts and the session; it is about bookings and drafts.
+      reset: () => setState((s) => ({ ...initial, onboarded: true, accounts: s.accounts, sessionId: s.sessionId })),
     }),
     [state, ready, patchBooking]
   );
