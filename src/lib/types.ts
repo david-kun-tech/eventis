@@ -50,6 +50,8 @@ export interface Vendor {
   tagline: string;
   /** Unsplash photo id (e.g. 'photo-123-abc'); see photoUrl(). */
   photo?: string;
+  /** A newly verified listing: no ratings or job history yet. */
+  isNew?: boolean;
   rating: number;
   ratingCount: number;
   sub: { punctuality: number; asDescribed: number; value: number; communication: number };

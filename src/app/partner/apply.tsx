@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { router, useLocalSearchParams, usePreventRemove } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, type ScrollViewInstance, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   Button,
   Card,
+  ConfirmDialog,
   CheckRow,
   Chip,
   ChipRow,
@@ -84,6 +85,20 @@ export default function Apply() {
   const { vendorDraft, vendorApp, saveVendorDraft, saveVendorApp } = useStore();
   const editing = !!vendorApp;
   const [d, setD] = useState<ApplicationDraft>(() => vendorApp?.draft ?? vendorDraft ?? emptyDraft());
+
+  // A new application saves as you type, so leaving any way keeps your progress.
+  useEffect(() => {
+    if (!editing) saveVendorDraft(d);
+    // Only when the draft changes: the store rebuilds saveVendorDraft on every state
+    // change, so listing it here would save in a loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d, editing]);
+
+  // Fixing a submitted application only counts once resubmitted, so leaving with
+  // unsent changes asks first.
+  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
+  const unsent = editing && JSON.stringify(d) !== JSON.stringify(vendorApp?.draft);
+  const allowLeave = usePreventRemove(unsent, ({ repeat }) => setPendingLeave(() => repeat));
   const [step, setStep] = useState<StepIndex>(() => {
     const n = Number(params.step);
     return (n >= 0 && n <= 4 ? n : 0) as StepIndex;
@@ -112,7 +127,6 @@ export default function Apply() {
       return;
     }
     if (!last) {
-      if (!editing) saveVendorDraft(d);
       go((step + 1) as StepIndex);
       return;
     }
@@ -128,6 +142,7 @@ export default function Apply() {
       ],
     });
     saveVendorDraft(null);
+    allowLeave();
     // Return to the page that opened the form rather than stacking a second copy of it.
     if (router.canGoBack()) router.back();
     else router.replace('/partner');
@@ -146,6 +161,19 @@ export default function Apply() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <ConfirmDialog
+        visible={!!pendingLeave}
+        title="Leave without resubmitting?"
+        body="Your changes won't be checked until you resubmit, and will be lost if you leave now."
+        confirmLabel="Discard changes"
+        onCancel={() => setPendingLeave(null)}
+        onConfirm={() => {
+          const leave = pendingLeave;
+          setPendingLeave(null);
+          allowLeave();
+          leave?.();
+        }}
+      />
       {/* Progress */}
       <View style={styles.progressWrap}>
         <View style={{ flexDirection: 'row', gap: 6 }}>

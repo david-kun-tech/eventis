@@ -5,7 +5,6 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Thumb } from '@/components/Cover';
 import { Button, EmptyState, PageTitle, Pill, Screen, T } from '@/components/ui';
-import { getVendor } from '@/data/vendors';
 import { daysUntil, formatDate, naira } from '@/lib/format';
 import { useStore } from '@/lib/store';
 import { C, R, S, shadow } from '@/lib/theme';
@@ -25,7 +24,7 @@ export const STATUS_LABEL: Record<BookingStatus, { label: string; tone: 'neutral
 const PAST: BookingStatus[] = ['completed', 'cancelled', 'vendor_no_show'];
 
 export default function Bookings() {
-  const { bookings, reset } = useStore();
+  const { bookings, reset, vendorById } = useStore();
   const [tab, setTab] = useState<'active' | 'past'>('active');
   const shown = bookings.filter((b) => (tab === 'past') === PAST.includes(b.status));
   const activeCount = bookings.filter((b) => !PAST.includes(b.status)).length;
@@ -71,7 +70,8 @@ export default function Bookings() {
         />
       ) : (
         shown.map((b) => {
-          const v = getVendor(b.vendorId)!;
+          const v = vendorById(b.vendorId);
+          if (!v) return null;
           const s = STATUS_LABEL[b.status];
           const d = daysUntil(b.dateISO);
           return (

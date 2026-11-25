@@ -41,7 +41,7 @@ export default function RootLayout() {
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="welcome" options={{ headerShown: false, gestureEnabled: false, animation: 'fade' }} />
-          <Stack.Screen name="vendor/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="vendor/[id]" options={{ headerShown: false, title: 'Vendor' }} />
           <Stack.Screen name="book/[id]" options={{ title: 'Book vendor' }} />
           <Stack.Screen name="booking/[id]" options={{ title: 'Booking details' }} />
           <Stack.Screen name="partner" options={{ title: 'Become a vendor' }} />

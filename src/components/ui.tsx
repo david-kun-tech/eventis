@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import { useScrollToTop } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -8,6 +10,8 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  type ScrollViewInstance,
+  type TextInputInstance,
   TextStyle,
   View,
   ViewStyle,
@@ -37,6 +41,9 @@ export function Screen({
   footer?: React.ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  // On a tab screen, tapping the tab you're already on scrolls back to the top.
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  useScrollToTop(scrollRef);
   const inner = [
     pad && { padding: S.lg },
     safeTop && { paddingTop: insets.top + S.md },
@@ -46,6 +53,7 @@ export function Screen({
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={[{ maxWidth: MAX_W, width: '100%', alignSelf: 'center' }, ...inner]}
           showsVerticalScrollIndicator={false}
@@ -300,10 +308,13 @@ export function SearchBar({
   placeholder = 'Search vendors and categories',
   onPress,
   autoFocus,
+  inputRef,
 }: {
   value?: string;
   onChangeText?: (s: string) => void;
   placeholder?: string;
+  /** Lets a screen focus the input on demand. */
+  inputRef?: React.Ref<TextInputInstance>;
   /** Makes the bar a button (e.g. to jump to Explore) instead of an input. */
   onPress?: () => void;
   autoFocus?: boolean;
@@ -321,6 +332,7 @@ export function SearchBar({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={C.faint}
+          ref={inputRef}
           autoFocus={autoFocus}
           returnKeyType="search"
           accessibilityLabel="Search vendors"
@@ -807,6 +819,43 @@ export function CheckRow({ label, checked, onToggle }: { label: string; checked:
   );
 }
 
+/** In-app confirm dialog (React Native's Alert does nothing on the web). */
+export function ConfirmDialog({
+  visible,
+  title,
+  body,
+  confirmLabel,
+  cancelLabel = 'Keep editing',
+  onConfirm,
+  onCancel,
+}: {
+  visible: boolean;
+  title: string;
+  body: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <Pressable style={styles.scrim} onPress={onCancel} accessibilityLabel="Close">
+        <Pressable style={styles.dialog} onPress={() => {}} accessibilityRole="alert">
+          <T size={18} bold>
+            {title}
+          </T>
+          <T size={14} color={C.sub} style={{ marginTop: S.xs, marginBottom: S.lg }}>
+            {body}
+          </T>
+          <Button label={cancelLabel} onPress={onCancel} />
+          <View style={{ height: S.sm }} />
+          <Button label={confirmLabel} kind="danger" onPress={onConfirm} />
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
 export const gap = (n = S.md) => <View style={{ height: n }} />;
 
 const styles = StyleSheet.create({
@@ -888,6 +937,21 @@ const styles = StyleSheet.create({
     color: C.ink,
   },
   eye: { position: 'absolute', right: 14, top: 24, height: 48, justifyContent: 'center' },
+  scrim: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 18, 34, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: S.xl,
+  },
+  dialog: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: C.card,
+    borderRadius: R.xl,
+    padding: S.xl,
+    ...shadow.md,
+  },
   checkbox: {
     width: 22,
     height: 22,

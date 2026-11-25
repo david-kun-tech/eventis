@@ -179,7 +179,7 @@ export default function Welcome() {
     router.replace('/');
   };
   const next = () => {
-    if (last) return router.push('/auth/sign-up');
+    if (last) return router.push({ pathname: '/auth/sign-up', params: { from: 'welcome' } });
     scroller.current?.scrollTo({ x: (i + 1) * w, animated: true });
     setI(i + 1);
   };
@@ -235,7 +235,7 @@ export default function Welcome() {
               <T size={14} color={C.sub}>
                 Already have an account?{' '}
               </T>
-              <Pressable accessibilityRole="link" onPress={() => router.push('/auth/log-in')} hitSlop={8}>
+              <Pressable accessibilityRole="link" onPress={() => router.push({ pathname: '/auth/log-in', params: { from: 'welcome' } })} hitSlop={8}>
                 <T size={14} semi color={C.brand} style={{ textDecorationLine: 'underline' }}>
                   Log in
                 </T>

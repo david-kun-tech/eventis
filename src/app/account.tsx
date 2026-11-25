@@ -97,13 +97,13 @@ export default function AccountScreen() {
       </Card>
 
       <Card style={{ paddingVertical: S.xs }}>
-        <MenuRow icon="calendar-outline" label="My bookings" detail={String(bookings.length)} onPress={() => router.push('/bookings')} />
+        <MenuRow icon="calendar-outline" label="My bookings" detail={String(bookings.length)} onPress={() => router.dismissTo('/bookings')} />
         <Divider />
         <MenuRow
           icon="heart-outline"
           label="Saved vendors"
           detail={String(saved.length)}
-          onPress={() => router.push({ pathname: '/explore', params: { saved: '1' } })}
+          onPress={() => router.dismissTo({ pathname: '/explore', params: { saved: '1' } })}
         />
         <Divider />
         <MenuRow
@@ -120,7 +120,7 @@ export default function AccountScreen() {
         icon="log-out-outline"
         onPress={() => {
           logOut();
-          router.replace('/');
+          router.dismissTo('/');
         }}
       />
       <View style={{ height: S.sm }} />
@@ -131,7 +131,7 @@ export default function AccountScreen() {
         onPress={() => {
           if (!confirmDelete) return setConfirmDelete(true);
           deleteAccount();
-          router.replace('/');
+          router.dismissTo('/');
         }}
       />
     </Screen>

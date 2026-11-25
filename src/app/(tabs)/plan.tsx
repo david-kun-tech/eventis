@@ -17,7 +17,7 @@ import {
   Stepper,
   T,
 } from '@/components/ui';
-import { VENDORS, PLANNER_RULES as P } from '@/data/vendors';
+import { PLANNER_RULES as P } from '@/data/vendors';
 import { naira } from '@/lib/format';
 import { powerPlan } from '@/lib/power';
 import { useStore } from '@/lib/store';
@@ -56,12 +56,12 @@ function PowerOption({
 }
 
 export default function Plan() {
-  const { guests, setGuests } = useStore();
+  const { guests, setGuests, vendors } = useStore();
   const [hours, setHours] = useState(6);
   const tables = Math.ceil(guests / P.guestsPerTable);
   const toilets = Math.ceil(guests / P.guestsPerToilet);
   const canopies = Math.ceil(guests / P.guestsPerCanopy);
-  const power = powerPlan(guests, hours);
+  const power = powerPlan(guests, hours, vendors);
   const poweredVenues = power.venues.fuelIncluded.length + power.venues.fuelExtra.length;
 
   const needs: {
@@ -78,7 +78,7 @@ export default function Plan() {
     { icon: 'business-outline', label: 'Venue capacity', qty: `${Math.ceil(guests * 1.1)}+`, note: 'Guests plus 10% buffer', cat: 'venues' },
   ];
 
-  const fits = VENDORS.filter((v) => v.category === 'venue' && (v.capacity ?? 0) >= guests * 1.1).length;
+  const fits = vendors.filter((v) => v.category === 'venue' && (v.capacity ?? 0) >= guests * 1.1).length;
 
   return (
     <Screen safeTop bottom={80}>

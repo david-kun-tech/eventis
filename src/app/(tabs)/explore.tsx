@@ -1,11 +1,11 @@
-import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { TextInputInstance } from 'react-native';
 import { View } from 'react-native';
 
 import { DatePicker } from '@/components/DatePicker';
 import { startingPrice, VendorCard } from '@/components/VendorCard';
 import { Button, Chip, ChipRow, EmptyState, IconButton, PageTitle, Screen, SearchBar, T } from '@/components/ui';
-import { VENDORS } from '@/data/vendors';
 import { vendorAvailableOn } from '@/lib/availability';
 import { formatDate } from '@/lib/format';
 import { useStore } from '@/lib/store';
@@ -18,7 +18,7 @@ const CITIES: (City | 'all')[] = ['all', 'Abuja', 'Lagos'];
 
 export default function Explore() {
   const params = useLocalSearchParams<{ cat?: string; saved?: string; focus?: string }>();
-  const { eventDate, setEventDate, bookings, saved } = useStore();
+  const { eventDate, setEventDate, bookings, saved, vendors } = useStore();
   const [cat, setCat] = useState<Category | 'all'>('all');
   const [city, setCity] = useState<City | 'all'>('all');
   const [sort, setSort] = useState<Sort>('rating');
@@ -26,18 +26,26 @@ export default function Explore() {
   const [onlySaved, setOnlySaved] = useState(false);
   const [q, setQ] = useState('');
 
-  useEffect(() => {
-    const map: Record<string, Category> = { venues: 'venue', rentals: 'rental', decor: 'decor', planners: 'planner' };
-    if (params.cat && map[params.cat]) setCat(map[params.cat]);
-  }, [params.cat]);
+  const searchRef = useRef<TextInputInstance>(null);
 
+  // Shortcuts from other screens (a category, Saved, or the search bar) arrive as params.
+  // Apply them, then clear them, so the same shortcut works again next time even though
+  // this tab stays mounted.
   useEffect(() => {
+    if (!params.cat && !params.saved && !params.focus) return;
+    const map: Record<string, Category> = { venues: 'venue', rentals: 'rental', decor: 'decor', planners: 'planner' };
+    if (params.cat && map[params.cat]) {
+      setCat(map[params.cat]);
+      setOnlySaved(false);
+    }
     if (params.saved) setOnlySaved(true);
-  }, [params.saved]);
+    if (params.focus) searchRef.current?.focus();
+    router.setParams({ cat: undefined, saved: undefined, focus: undefined });
+  }, [params.cat, params.saved, params.focus]);
 
   const list = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    let l = VENDORS.filter(
+    let l = vendors.filter(
       (v) =>
         (cat === 'all' || v.category === cat) &&
         (city === 'all' || v.city === city) &&
@@ -52,7 +60,7 @@ export default function Explore() {
           ? startingPrice(a) - startingPrice(b)
           : b.reliability.onTimePct - a.reliability.onTimePct
     );
-  }, [cat, city, sort, eventDate, onlyFree, onlySaved, saved, q, bookings]);
+  }, [vendors, cat, city, sort, eventDate, onlyFree, onlySaved, saved, q, bookings]);
 
   const clearFilters = () => {
     setCat('all');
@@ -78,7 +86,7 @@ export default function Explore() {
         }
       />
 
-      <SearchBar value={q} onChangeText={setQ} autoFocus={!!params.focus} />
+      <SearchBar value={q} onChangeText={setQ} inputRef={searchRef} />
 
       <View style={{ height: S.lg }} />
       <ChipRow>

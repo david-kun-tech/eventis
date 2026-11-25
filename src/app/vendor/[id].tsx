@@ -7,8 +7,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvailabilityCalendar } from '@/components/AvailabilityCalendar';
 import { Cover } from '@/components/Cover';
 import { startingPrice } from '@/components/VendorCard';
-import { Button, Card, EmptyState, IconBubble, IconButton, Notice, Pill, Rating, Screen, SectionHeader, Stars, T } from '@/components/ui';
-import { getVendor, MARKET_AVG } from '@/data/vendors';
+import {
+  Button,
+  Card,
+  EmptyState,
+  IconBubble,
+  IconButton,
+  Notice,
+  Pill,
+  Rating,
+  Screen,
+  SectionHeader,
+  Stars,
+  T,
+} from '@/components/ui';
+import { MARKET_AVG } from '@/data/vendors';
 import { dayStatus, unitsLeft } from '@/lib/availability';
 import { chipDate, formatDate, naira } from '@/lib/format';
 import { POLICIES } from '@/lib/policies';
@@ -50,10 +63,10 @@ function Stat({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap; va
 export default function VendorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
-  const { eventDate, setEventDate, bookings, toggleSaved, saved } = useStore();
-  const v = getVendor(id);
+  const { eventDate, setEventDate, bookings, toggleSaved, saved, vendorById } = useStore();
+  const v = vendorById(id);
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const back = () => (router.canGoBack() ? router.back() : router.dismissTo('/'));
 
   if (!v)
     return (
@@ -62,7 +75,7 @@ export default function VendorScreen() {
           icon="help-circle-outline"
           title="Vendor not found"
           body="This vendor may have been removed."
-          action={<Button label="Back to explore" onPress={() => router.replace('/explore')} />}
+          action={<Button label="Back to explore" onPress={() => router.dismissTo('/explore')} />}
         />
       </Screen>
     );
@@ -123,27 +136,37 @@ export default function VendorScreen() {
             {v.capacity ? ` · Up to ${v.capacity} guests` : ''}
           </T>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: S.sm }}>
-          <Rating value={v.rating} size={15} />
-          <T size={13} color={C.sub} style={{ marginLeft: 6 }}>
-            {v.ratingCount} verified reviews
-          </T>
-        </View>
+        {v.isNew ? (
+          <View style={{ flexDirection: 'row', marginTop: S.sm }}>
+            <Pill label="New on Eventis" icon="sparkles" tone="warn" />
+          </View>
+        ) : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: S.sm }}>
+            <Rating value={v.rating} size={15} />
+            <T size={13} color={C.sub} style={{ marginLeft: 6 }}>
+              {v.ratingCount} verified reviews
+            </T>
+          </View>
+        )}
 
         <View style={styles.verified}>
           <Ionicons name="shield-checkmark" size={16} color={C.green} />
           <T size={12} color={C.green} style={{ flex: 1, marginLeft: 6 }}>
-            ID, business registration and payout account checked. {cat.plural === 'Venues' ? 'Venue' : 'Stock'} inspected in
-            person.
+            ID, business registration and payout account checked. {cat.plural === 'Venues' ? 'Venue' : 'Stock'}{' '}
+            inspected in person.
           </T>
         </View>
 
-        <View style={styles.stats}>
-          <Stat icon="time-outline" value={`${r.onTimePct}%`} label="On time" />
-          <Stat icon="checkmark-done-outline" value={String(r.completed)} label="Jobs done" />
-          <Stat icon="chatbubble-ellipses-outline" value={`${r.responseMins}m`} label="Reply time" />
-          <Stat icon="close-circle-outline" value={`${r.cancelledPct}%`} label="Cancelled" />
-        </View>
+        {v.isNew ? (
+          <View style={{ height: S.xl }} />
+        ) : (
+          <View style={styles.stats}>
+            <Stat icon="time-outline" value={`${r.onTimePct}%`} label="On time" />
+            <Stat icon="checkmark-done-outline" value={String(r.completed)} label="Jobs done" />
+            <Stat icon="chatbubble-ellipses-outline" value={`${r.responseMins}m`} label="Reply time" />
+            <Stat icon="close-circle-outline" value={`${r.cancelledPct}%`} label="Cancelled" />
+          </View>
+        )}
 
         <SectionHeader title="About" />
         <T size={14} color={C.sub} style={{ marginBottom: S.sm }}>
@@ -237,24 +260,26 @@ export default function VendorScreen() {
           );
         })}
 
-        <SectionHeader title="Ratings breakdown" style={{ marginTop: S.lg }} />
-        <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: S.lg }}>
-            <T size={40} bold style={{ lineHeight: 46 }}>
-              {v.rating.toFixed(1)}
-            </T>
-            <View style={{ marginLeft: S.md }}>
-              <Stars value={v.rating} size={16} />
-              <T size={12} color={C.sub}>
-                {v.ratingCount} verified reviews
+        {!v.isNew && <SectionHeader title="Ratings breakdown" style={{ marginTop: S.lg }} />}
+        {!v.isNew && (
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: S.lg }}>
+              <T size={40} bold style={{ lineHeight: 46 }}>
+                {v.rating.toFixed(1)}
               </T>
+              <View style={{ marginLeft: S.md }}>
+                <Stars value={v.rating} size={16} />
+                <T size={12} color={C.sub}>
+                  {v.ratingCount} verified reviews
+                </T>
+              </View>
             </View>
-          </View>
-          <Bar label="Punctuality" value={v.sub.punctuality} />
-          <Bar label="As described" value={v.sub.asDescribed} />
-          <Bar label="Value for money" value={v.sub.value} />
-          <Bar label="Communication" value={v.sub.communication} />
-        </Card>
+            <Bar label="Punctuality" value={v.sub.punctuality} />
+            <Bar label="As described" value={v.sub.asDescribed} />
+            <Bar label="Value for money" value={v.sub.value} />
+            <Bar label="Communication" value={v.sub.communication} />
+          </Card>
+        )}
 
         <SectionHeader title="Policies" style={{ marginTop: S.lg }} />
         <Card style={{ flexDirection: 'row' }}>
@@ -265,7 +290,11 @@ export default function VendorScreen() {
               {policy.summary}
             </T>
             <T size={13} color={C.sub} style={{ marginTop: 4 }}>
-              Deposit to confirm: <T size={13} bold>{policy.depositPct}%</T>. Vendor no-shows are always refunded in full.
+              Deposit to confirm:{' '}
+              <T size={13} bold>
+                {policy.depositPct}%
+              </T>
+              . Vendor no-shows are always refunded in full.
             </T>
           </View>
         </Card>
@@ -296,6 +325,11 @@ export default function VendorScreen() {
         )}
 
         <SectionHeader title={`Reviews (${v.reviews.length})`} style={{ marginTop: S.lg }} />
+        {v.reviews.length === 0 && (
+          <T size={13} color={C.sub}>
+            No reviews yet. Only hosts with a completed booking can leave one.
+          </T>
+        )}
         {v.reviews.map((rev) => (
           <Card key={rev.id}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>

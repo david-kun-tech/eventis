@@ -19,7 +19,6 @@ import {
   Stepper,
   T,
 } from '@/components/ui';
-import { VENDORS } from '@/data/vendors';
 import { firstName, initials } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
 import { useStore } from '@/lib/store';
@@ -130,8 +129,9 @@ function Banners() {
 }
 
 export default function Home() {
-  const { eventDate, setEventDate, guests, setGuests, saved, vendorApp, user } = useStore();
-  const top = [...VENDORS].sort((a, b) => b.rating - a.rating).slice(0, 6);
+  const { eventDate, setEventDate, guests, setGuests, saved, vendorApp, user, vendors } = useStore();
+  // New listings have no rating yet, so they appear in Explore rather than here.
+  const top = vendors.filter((v) => !v.isNew).sort((a, b) => b.rating - a.rating).slice(0, 6);
 
   return (
     <Screen safeTop bottom={80}>

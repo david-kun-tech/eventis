@@ -6,6 +6,7 @@ import { StyleSheet, View } from 'react-native';
 import { DatePicker } from '@/components/DatePicker';
 import { Button, Card, Divider, IconBubble, Notice, Pill, Screen, SectionHeader, T, type Tone } from '@/components/ui';
 import { formatDateLong, formatStamp } from '@/lib/format';
+import { MY_LISTING_ID } from '@/lib/listing';
 import { POLICIES } from '@/lib/policies';
 import { useStore } from '@/lib/store';
 import { C, CAT, R, S, shadow } from '@/lib/theme';
@@ -48,7 +49,7 @@ const STATUS: Record<AppStatus, { title: string; body: string; tone: Tone; icon:
   },
   verified: {
     title: 'You are a verified vendor',
-    body: 'Every check passed. Your listing is ready to go live.',
+    body: 'Your listing is live. Hosts can find and book you in Explore.',
     tone: 'good',
     icon: 'shield-checkmark',
   },
@@ -263,6 +264,11 @@ function Status({ app }: { app: VendorApplication }) {
             </>
           )}
         </Card>
+      )}
+      {status === 'verified' && (
+        <View style={{ marginBottom: S.md }}>
+          <Button label="View your listing" icon="storefront-outline" onPress={() => router.push(`/vendor/${MY_LISTING_ID}`)} />
+        </View>
       )}
       {status === 'verified' && (
         <Notice tone="good" title="Probation: your first 3 bookings">

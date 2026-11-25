@@ -298,3 +298,43 @@ describe('accounts', () => {
     expect(firstName(' Amaka Obi')).toBe('Amaka');
   });
 });
+
+describe('verified listing', () => {
+  async function verifiedApp(category: 'venue' | 'rental' = 'rental') {
+    const v = await import('@/lib/verification');
+    const d = v.emptyDraft();
+    d.business = { name: 'Eko Chairs and Canopies', category, city: 'Lagos', area: 'Ikeja', phone: '08031234567', about: '' };
+    d.offer.items = [
+      { id: 'a', name: category === 'venue' ? 'Main hall' : 'Chiavari chair', unit: 'piece', price: 600, stock: 300 },
+      { id: 'b', name: 'Marquee tent', unit: 'piece', price: 90000, stock: 2 },
+    ];
+    d.offer.capacity = 250;
+    const app = { draft: d, submittedAt: '', inspectionDate: null, events: [], checks: v.freshChecks(d) };
+    return { v, app };
+  }
+
+  it('only exists once every check has passed', async () => {
+    const { listingFromApplication } = await import('@/lib/listing');
+    const { app } = await verifiedApp();
+    expect(listingFromApplication(app)).toBeNull();
+    for (const k of ['identity', 'business', 'bank', 'references', 'inspection'] as const) app.checks[k] = { state: 'passed' };
+    const l = listingFromApplication(app)!;
+    expect(l.isNew).toBe(true);
+    expect(l.items.map((i) => i.kind)).toEqual(['chair', 'tent']);
+    expect(l.tagline).toMatch(/Ikeja, Lagos/);
+  });
+
+  it('joins the vendor list and has no made-up bookings by others', async () => {
+    const { allVendors, findVendor, MY_LISTING_ID } = await import('@/lib/listing');
+    const { unitsLeft } = await import('@/lib/availability');
+    const { app } = await verifiedApp('venue');
+    for (const k of ['identity', 'business', 'bank', 'references', 'inspection'] as const) app.checks[k] = { state: 'passed' };
+    expect(allVendors(app).some((x) => x.id === MY_LISTING_ID)).toBe(true);
+    const mine = findVendor(MY_LISTING_ID, app)!;
+    expect(mine.items[0].kind).toBe('venue');
+    expect(mine.capacity).toBe(250);
+    // Even on a Saturday, the whole hall is free.
+    expect(unitsLeft(mine, mine.items[0], '2027-01-09', [])).toBe(mine.items[0].stock);
+    expect(findVendor(MY_LISTING_ID, null)).toBeUndefined();
+  });
+});

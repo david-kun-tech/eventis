@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
 
@@ -7,6 +7,7 @@ import { DatePicker } from '@/components/DatePicker';
 import {
   Button,
   Card,
+  ConfirmDialog,
   Divider,
   EmptyState,
   IconBubble,
@@ -18,7 +19,6 @@ import {
   Stepper,
   T,
 } from '@/components/ui';
-import { getVendor } from '@/data/vendors';
 import { unitsLeft, vendorAvailableOn } from '@/lib/availability';
 import { daysUntil, formatDateLong, naira } from '@/lib/format';
 import { POLICIES } from '@/lib/policies';
@@ -28,13 +28,19 @@ import { C, R, S } from '@/lib/theme';
 
 export default function Book() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { eventDate, setEventDate, guests, bookings, createBooking } = useStore();
-  const v = getVendor(id);
+  const { eventDate, setEventDate, guests, bookings, createBooking, vendorById } = useStore();
+  const v = vendorById(id);
   const [qty, setQty] = useState<Record<string, number>>({});
   const [outdoor, setOutdoor] = useState(!!v?.outdoor);
   const [rainCover, setRainCover] = useState(false);
 
   const bd = useMemo(() => (v ? buildBreakdown(v, qty) : null), [v, qty]);
+
+  // Leaving with items picked (back button, swipe or Android back) asks first.
+  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
+  const picked = Object.values(qty).some((n) => n > 0);
+  const allowLeave = usePreventRemove(picked, ({ repeat }) => setPendingLeave(() => repeat));
+
   if (!v || !bd)
     return (
       <Screen>
@@ -63,6 +69,7 @@ export default function Book() {
       outdoor,
       notes: rainCover ? 'Rain-cover plan confirmed by customer.' : '',
     });
+    allowLeave();
     router.replace(`/booking/${bid}`);
   };
 
@@ -88,6 +95,20 @@ export default function Book() {
           </T>
         </>
       }>
+      <ConfirmDialog
+        visible={!!pendingLeave}
+        title="Discard this booking?"
+        body="The items you picked will be cleared."
+        confirmLabel="Discard"
+        onCancel={() => setPendingLeave(null)}
+        onConfirm={() => {
+          const leave = pendingLeave;
+          setPendingLeave(null);
+          allowLeave();
+          leave?.();
+        }}
+      />
+
       {/* Vendor summary */}
       <Card style={{ flexDirection: 'row', alignItems: 'center', padding: S.md }}>
         <Thumb category={v.category} photo={v.photo} size={56} />

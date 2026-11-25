@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { getVendor } from '@/data/vendors';
 import { buildBreakdown, previewCancellation, settleReturn } from './pricing';
-import type { Booking, BookingLine, BookingStatus } from './types';
+import { allVendors, findVendor } from './listing';
+import type { Booking, BookingLine, BookingStatus, Vendor } from './types';
 import type { ApplicationDraft, VendorApplication } from './verification';
 import { createAccount, signUpProblems, verifyLogin, type Account, type SignUpInput, type SignUpProblems } from './auth';
 import { newId, randomHex, sha256 } from './crypto';
@@ -34,6 +34,9 @@ interface Store extends Persisted {
   saveVendorDraft: (d: ApplicationDraft | null) => void;
   /** The logged-in account, if any. */
   user: Account | null;
+  /** Every bookable vendor: the samples plus the user's own listing once verified. */
+  vendors: Vendor[];
+  vendorById: (id: string) => Vendor | undefined;
   signUp: (input: SignUpInput) => Promise<SignUpProblems>;
   logIn: (email: string, password: string) => Promise<boolean>;
   logOut: () => void;
@@ -109,6 +112,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       finishOnboarding: () => setState((s) => ({ ...s, onboarded: true })),
       saveVendorDraft: (d) => setState((s) => ({ ...s, vendorDraft: d })),
       user: state.accounts.find((a) => a.id === state.sessionId) ?? null,
+      vendors: allVendors(state.vendorApp),
+      vendorById: (id) => findVendor(id, state.vendorApp),
       signUp: async (input) => {
         const problems = signUpProblems(input, state.accounts);
         if (Object.keys(problems).length) return problems;
@@ -126,7 +131,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setState((s) => ({ ...s, accounts: s.accounts.filter((a) => a.id !== s.sessionId), sessionId: null })),
       saveVendorApp: (a) => setState((s) => ({ ...s, vendorApp: a })),
       createBooking: ({ vendorId, dateISO, lines, outdoor, notes }) => {
-        const vendor = getVendor(vendorId)!;
+        const vendor = findVendor(vendorId, state.vendorApp)!;
         const qty: Record<string, number> = {};
         lines.forEach((l) => (qty[l.itemId] = l.qty));
         const id = 'B' + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -157,7 +162,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         })),
       completeReturn: (id, returned) =>
         patchBooking(id, (b) => {
-          const vendor = getVendor(b.vendorId)!;
+          const vendor = findVendor(b.vendorId, state.vendorApp);
+          if (!vendor) return b;
           const settlement = settleReturn(vendor, b, returned);
           return {
             ...b,

@@ -19,7 +19,6 @@ import {
   Stepper,
   T,
 } from '@/components/ui';
-import { getVendor } from '@/data/vendors';
 import { formatDateLong, formatStamp, naira } from '@/lib/format';
 import { POLICIES } from '@/lib/policies';
 import { paidSoFar, previewCancellation, settleReturn } from '@/lib/pricing';
@@ -108,9 +107,9 @@ function StepCard({
 
 export default function BookingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { bookings, advance, confirmDelivery, completeReturn, cancel, reportNoShow, submitReview } = useStore();
+  const { bookings, advance, confirmDelivery, completeReturn, cancel, reportNoShow, submitReview, vendorById } = useStore();
   const b = bookings.find((x) => x.id === id);
-  const v = b ? getVendor(b.vendorId) : undefined;
+  const v = b ? vendorById(b.vendorId) : undefined;
 
   const [recv, setRecv] = useState<Record<string, number>>({});
   const [ret, setRet] = useState<Record<string, { returned: number; damaged: number }>>({});

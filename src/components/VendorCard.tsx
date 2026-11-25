@@ -100,13 +100,17 @@ export function VendorCard({ vendor, dateOk }: { vendor: Vendor; dateOk?: boolea
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <View style={styles.metaRow}>
-                <Ionicons name="time" size={13} color={C.goldDark} />
-                <T size={13} semi style={{ marginLeft: 3, marginRight: S.sm }}>
-                  {r.onTimePct}%
-                </T>
-                <Rating value={v.rating} count={v.ratingCount} />
-              </View>
+              {v.isNew ? (
+                <Pill label="New" icon="sparkles" tone="warn" />
+              ) : (
+                <View style={styles.metaRow}>
+                  <Ionicons name="time" size={13} color={C.goldDark} />
+                  <T size={13} semi style={{ marginLeft: 3, marginRight: S.sm }}>
+                    {r.onTimePct}%
+                  </T>
+                  <Rating value={v.rating} count={v.ratingCount} />
+                </View>
+              )}
             </View>
           </View>
 
@@ -115,7 +119,11 @@ export function VendorCard({ vendor, dateOk }: { vendor: Vendor; dateOk?: boolea
           </T>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: S.sm }}>
-            <Pill label={`${r.completed} jobs`} icon="checkmark-done-outline" />
+            {v.isNew ? (
+              <Pill label="Verified, new on Eventis" icon="shield-checkmark-outline" tone="good" />
+            ) : (
+              <Pill label={`${r.completed} jobs`} icon="checkmark-done-outline" />
+            )}
             <Pill label={`${POLICIES[v.policy].label} cancellation`} icon="shield-checkmark-outline" tone="brand" />
           </View>
 

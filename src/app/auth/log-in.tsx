@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -9,6 +9,8 @@ import { C, S } from '@/lib/theme';
 
 export default function LogIn() {
   const { logIn, finishOnboarding, accounts } = useStore();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const fromWelcome = from === 'welcome';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [failed, setFailed] = useState(false);
@@ -20,7 +22,7 @@ export default function LogIn() {
     const ok = await logIn(email, password);
     setBusy(false);
     setFailed(!ok);
-    if (ok) leaveAuth();
+    if (ok) leaveAuth(fromWelcome);
   };
 
   return (
@@ -29,7 +31,7 @@ export default function LogIn() {
       subtitle="Log in to see your bookings and saved vendors."
       onGuest={() => {
         finishOnboarding();
-        leaveAuth();
+        leaveAuth(fromWelcome);
       }}>
       {failed && (
         <Notice tone="bad" title="Email or password is incorrect">
@@ -67,7 +69,7 @@ export default function LogIn() {
         <T size={14} color={C.sub}>
           New to Eventis?{' '}
         </T>
-        <Pressable accessibilityRole="link" onPress={() => router.replace('/auth/sign-up')} hitSlop={8}>
+        <Pressable accessibilityRole="link" onPress={() => router.replace({ pathname: '/auth/sign-up', params: from ? { from } : {} })} hitSlop={8}>
           <T size={14} semi color={C.brand} style={{ textDecorationLine: 'underline' }}>
             Create an account
           </T>

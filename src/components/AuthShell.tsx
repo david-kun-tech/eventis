@@ -10,10 +10,18 @@ import { T } from './ui';
 
 const LOGO = require('@/assets/images/logo-mark-light.png');
 
-/** Leave the auth flow for Home, dropping the auth screens (and the welcome slides) behind. */
-export function leaveAuth() {
-  if (router.canDismiss()) router.dismissAll();
-  router.replace('/');
+/**
+ * Leave the auth flow for Home.
+ * From the welcome slides: clear the whole stack so Back can't return to them.
+ * From anywhere else (e.g. Account): go back to the Home that is already open.
+ */
+export function leaveAuth(fromWelcome: boolean) {
+  if (fromWelcome) {
+    if (router.canDismiss()) router.dismissAll();
+    router.replace('/');
+  } else {
+    router.dismissTo('/');
+  }
 }
 
 /** Shared frame for sign up and log in: back, logo, title, form, and a guest exit. */

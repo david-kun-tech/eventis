@@ -22,7 +22,9 @@ function hash(s: string) {
  * Demo data standing in for other customers' bookings. Deterministic, and busier on
  * Saturdays (wedding day) so the "fully booked" state shows up naturally.
  */
-function bookedByOthers(vendorId: string, item: VendorItem, iso: string) {
+function bookedByOthers(vendorId: string, item: VendorItem, iso: string, isNew?: boolean) {
+  // A brand-new listing has no other customers yet.
+  if (isNew) return 0;
   const dow = parseISO(iso).getDay();
   let f = 0.1 + 0.45 * hash(vendorId + item.id + iso);
   if (dow === 6) f += 0.4;
@@ -42,7 +44,7 @@ function bookedByMe(bookings: Booking[], vendorId: string, itemId: string, iso: 
 export function unitsLeft(vendor: Vendor, item: VendorItem, iso: string, bookings: Booking[]) {
   return Math.max(
     0,
-    item.stock - bookedByOthers(vendor.id, item, iso) - bookedByMe(bookings, vendor.id, item.id, iso)
+    item.stock - bookedByOthers(vendor.id, item, iso, vendor.isNew) - bookedByMe(bookings, vendor.id, item.id, iso)
   );
 }
 

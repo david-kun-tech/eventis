@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -11,6 +11,8 @@ import { C, S } from '@/lib/theme';
 
 export default function SignUp() {
   const { signUp, finishOnboarding } = useStore();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const fromWelcome = from === 'welcome';
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -24,7 +26,7 @@ export default function SignUp() {
     const problems = await signUp({ name, email, phone, password });
     setBusy(false);
     setErrors(problems);
-    if (Object.keys(problems).length === 0) leaveAuth();
+    if (Object.keys(problems).length === 0) leaveAuth(fromWelcome);
   };
 
   return (
@@ -33,7 +35,7 @@ export default function SignUp() {
       subtitle="Save vendors, track bookings and get verified as a vendor."
       onGuest={() => {
         finishOnboarding();
-        leaveAuth();
+        leaveAuth(fromWelcome);
       }}>
       <Field label="Full name" value={name} onChangeText={setName} placeholder="Amaka Obi" autoCapitalize="words" autoComplete="name" returnKeyType="next" error={errors.name} />
       <Field label="Email" value={email} onChangeText={setEmail} placeholder="amaka@example.com" keyboardType="email-address" autoComplete="email" returnKeyType="next" error={errors.email} />
@@ -76,7 +78,7 @@ export default function SignUp() {
         <T size={14} color={C.sub}>
           Already have an account?{' '}
         </T>
-        <Pressable accessibilityRole="link" onPress={() => router.replace('/auth/log-in')} hitSlop={8}>
+        <Pressable accessibilityRole="link" onPress={() => router.replace({ pathname: '/auth/log-in', params: from ? { from } : {} })} hitSlop={8}>
           <T size={14} semi color={C.brand} style={{ textDecorationLine: 'underline' }}>
             Log in
           </T>
